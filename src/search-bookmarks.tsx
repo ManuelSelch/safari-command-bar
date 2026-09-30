@@ -237,7 +237,7 @@ function TabItem({
     try {
       await focusSafariTab(tab);
       resetSearch();
-      await refresh();
+      void refresh();
       await closeMainWindow({ clearRootSearch: true });
     } catch (error) {
       await showToast({
