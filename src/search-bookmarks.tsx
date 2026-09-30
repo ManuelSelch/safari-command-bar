@@ -240,11 +240,7 @@ function TabItem({ tab, refresh }: { tab: SafariTab; refresh: () => void }) {
         `window ${tab.windowId}`,
         `tab ${tab.tabIndex}`,
       ]}
-      accessories={[
-        tab.isCurrent
-          ? { tag: "Current" }
-          : { text: `Window ${tab.windowId} · Tab ${tab.tabIndex}` },
-      ]}
+      accessories={[{ text: `Window ${tab.windowId} · Tab ${tab.tabIndex}` }]}
       actions={
         <ActionPanel>
           <Action title="Focus Tab" icon={Icon.Window} onAction={focusTab} />
