@@ -3,9 +3,10 @@ import {
   ActionPanel,
   Detail,
   Icon,
-  List,
-  Toast,
   Keyboard,
+  List,
+  PopToRootType,
+  Toast,
   closeMainWindow,
   open,
   showToast,
@@ -260,7 +261,10 @@ function TabItem({
     try {
       await focusSafariTab(tab);
       void refresh();
-      await closeMainWindow({ clearRootSearch: true });
+      await closeMainWindow({
+        clearRootSearch: true,
+        popToRootType: PopToRootType.Immediate,
+      });
     } catch (error) {
       await showToast({
         style: Toast.Style.Failure,
@@ -317,7 +321,10 @@ function BookmarkItem({
   async function openInSafari() {
     try {
       await open(bookmark.url, "Safari");
-      await closeMainWindow({ clearRootSearch: true });
+      await closeMainWindow({
+        clearRootSearch: true,
+        popToRootType: PopToRootType.Immediate,
+      });
     } catch (error) {
       await showToast({
         style: Toast.Style.Failure,

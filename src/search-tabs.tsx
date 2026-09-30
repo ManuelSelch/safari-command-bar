@@ -2,9 +2,10 @@ import {
   Action,
   ActionPanel,
   Icon,
-  List,
-  Toast,
   Keyboard,
+  List,
+  PopToRootType,
+  Toast,
   closeMainWindow,
   showToast,
 } from "@raycast/api";
@@ -89,7 +90,10 @@ function TabItem({
     try {
       await focusSafariTab(tab);
       void refresh();
-      await closeMainWindow({ clearRootSearch: true });
+      await closeMainWindow({
+        clearRootSearch: true,
+        popToRootType: PopToRootType.Immediate,
+      });
     } catch (error) {
       await showToast({
         style: Toast.Style.Failure,
