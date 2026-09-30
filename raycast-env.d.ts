@@ -17,6 +17,8 @@ declare namespace Preferences {
   export type SearchBookmarks = ExtensionPreferences & {}
   /** Preferences accessible in the `set-profile` command */
   export type SetProfile = ExtensionPreferences & {}
+  /** Preferences accessible in the `search-tabs` command */
+  export type SearchTabs = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
@@ -24,5 +26,7 @@ declare namespace Arguments {
   export type SearchBookmarks = {}
   /** Arguments passed to the `set-profile` command */
   export type SetProfile = {}
+  /** Arguments passed to the `search-tabs` command */
+  export type SearchTabs = {}
 }
 

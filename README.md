@@ -8,6 +8,7 @@ Safari profiles are mirrored by bookmark folders with the same name. The extensi
 ## Commands
 - **Set Safari Profile**: choose a bookmark folder as current profile.
 - **Search Profile Bookmarks**: search bookmarks inside the current profile folder.
+- **Search Safari Tabs**: search open Safari tabs and press Enter to focus the selected tab.
 
 ## Development
 ```bash

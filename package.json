@@ -19,6 +19,12 @@
       "title": "Set Safari Profile",
       "description": "Choose the Safari bookmark folder used as the current profile.",
       "mode": "view"
+    },
+    {
+      "name": "search-tabs",
+      "title": "Search Safari Tabs",
+      "description": "Search open Safari tabs and focus the selected tab.",
+      "mode": "view"
     }
   ],
   "dependencies": {
