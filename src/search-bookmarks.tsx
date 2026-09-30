@@ -95,11 +95,14 @@ export default function Command() {
           : "Select a profile first..."
       }
       searchBarAccessory={
-        <ProfileDropdown
-          currentProfile={currentProfile}
-          profiles={profileNames}
-          onChange={chooseProfile}
-        />
+        !isLoading ? (
+          <ProfileDropdown
+            key={currentProfile ?? NO_PROFILE_VALUE}
+            currentProfile={currentProfile}
+            profiles={profileNames}
+            onChange={chooseProfile}
+          />
+        ) : undefined
       }
     >
       {!currentProfile && !isLoading ? (
@@ -158,21 +161,24 @@ function ProfileDropdown({
   profiles: string[];
   onChange: (profile: string) => void;
 }) {
+  const selectableProfiles =
+    currentProfile && !profiles.includes(currentProfile)
+      ? [currentProfile, ...profiles]
+      : profiles;
+
   return (
     <List.Dropdown
       tooltip="Select Safari Profile"
       value={currentProfile ?? NO_PROFILE_VALUE}
       onChange={(value) => {
-        if (value !== NO_PROFILE_VALUE) {
+        if (value !== NO_PROFILE_VALUE && value !== currentProfile) {
           onChange(value);
         }
       }}
     >
-      {!currentProfile ? (
-        <List.Dropdown.Item title="Select Profile" value={NO_PROFILE_VALUE} />
-      ) : null}
+      <List.Dropdown.Item title="Select Profile" value={NO_PROFILE_VALUE} />
       <List.Dropdown.Section title="Profiles">
-        {profiles.map((profile) => (
+        {selectableProfiles.map((profile) => (
           <List.Dropdown.Item key={profile} title={profile} value={profile} />
         ))}
       </List.Dropdown.Section>
