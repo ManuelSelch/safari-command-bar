@@ -89,11 +89,7 @@ export default function Command() {
       navigationTitle={
         currentProfile ? `${currentProfile} Bookmarks` : "Profile Bookmarks"
       }
-      searchBarPlaceholder={
-        currentProfile
-          ? `Search ${currentProfile} bookmarks...`
-          : "Select a profile first..."
-      }
+      searchBarPlaceholder="Search..."
       searchBarAccessory={
         !isLoading ? (
           <ProfileDropdown
@@ -140,6 +136,7 @@ export default function Command() {
           <BookmarkItem
             key={bookmark.uuid}
             bookmark={bookmark}
+            currentProfile={currentProfile}
             onChangeProfile={() =>
               push(<ProfilePicker onSelected={(profile) => reload(profile)} />)
             }
@@ -186,14 +183,24 @@ function ProfileDropdown({
   );
 }
 
+const SYSTEM_FOLDER_TITLES = new Set([
+  "",
+  "Bookmarks",
+  "BookmarksBar",
+  "BookmarksMenu",
+]);
+
 function BookmarkItem({
   bookmark,
+  currentProfile,
   onChangeProfile,
 }: {
   bookmark: SafariBookmark;
+  currentProfile?: string;
   onChangeProfile: () => void;
 }) {
-  const folderPath = bookmark.folderPath.join(" / ");
+  const folderPath = getRelativeFolderPath(bookmark.folderPath, currentProfile);
+  const accessories = folderPath ? [{ text: folderPath }] : [];
 
   async function openInSafari() {
     try {
@@ -209,10 +216,10 @@ function BookmarkItem({
 
   return (
     <List.Item
-      icon={Icon.Bookmark}
+      icon={getBookmarkIcon(bookmark)}
       title={bookmark.title}
       subtitle={bookmark.domain}
-      accessories={[{ text: folderPath }]}
+      accessories={accessories}
       actions={
         <ActionPanel>
           <Action
@@ -235,6 +242,30 @@ function BookmarkItem({
       }
     />
   );
+}
+
+function getBookmarkIcon(bookmark: SafariBookmark) {
+  if (!bookmark.domain) {
+    return Icon.Bookmark;
+  }
+
+  return {
+    source: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(bookmark.domain)}&sz=64`,
+    fallback: Icon.Bookmark,
+  };
+}
+
+function getRelativeFolderPath(
+  folderPath: string[],
+  currentProfile?: string,
+): string {
+  const profileIndex = currentProfile ? folderPath.indexOf(currentProfile) : -1;
+  const relativePath =
+    profileIndex >= 0 ? folderPath.slice(profileIndex + 1) : folderPath;
+
+  return relativePath
+    .filter((folder) => !SYSTEM_FOLDER_TITLES.has(folder))
+    .join(" / ");
 }
 
 function CommonActions({ onChangeProfile }: { onChangeProfile: () => void }) {
