@@ -1,3 +1,10 @@
+import {
+  mkdir,
+  readFile as readTextFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { homedir } from "node:os";
 import { promisify } from "node:util";
 import { bplistParser, readFile } from "simple-plist";
@@ -28,9 +35,37 @@ const SYSTEM_FOLDER_TITLES = new Set([
   "com.apple.ReadingList",
 ]);
 
+const CACHE_DIR = `${homedir()}/Library/Caches/safari-command-bar`;
+const BOOKMARK_CACHE_PATH = `${CACHE_DIR}/bookmarks-cache-v1.json`;
+
+type BookmarkCache = {
+  mtimeMs: number;
+  bookmarks: SafariBookmark[];
+};
+
 export async function loadSafariBookmarks(): Promise<SafariBookmark[]> {
   const plist = await readPlist(SAFARI_BOOKMARKS_PATH);
   return extractBookmarks(plist);
+}
+
+export async function loadCachedSafariBookmarks(): Promise<
+  SafariBookmark[] | undefined
+> {
+  const cache = await readBookmarkCache();
+  return cache?.bookmarks;
+}
+
+export async function loadSafariBookmarksCached(): Promise<SafariBookmark[]> {
+  const mtimeMs = await getBookmarksMtime();
+  const cache = await readBookmarkCache();
+
+  if (cache?.mtimeMs === mtimeMs) {
+    return cache.bookmarks;
+  }
+
+  const bookmarks = await loadSafariBookmarks();
+  await writeBookmarkCache({ mtimeMs, bookmarks });
+  return bookmarks;
 }
 
 export function extractBookmarks(root: SafariBookmarksRoot): SafariBookmark[] {
@@ -88,6 +123,31 @@ function flattenBookmarks(
       folderPath,
     },
   ];
+}
+
+async function getBookmarksMtime(): Promise<number> {
+  const stats = await stat(SAFARI_BOOKMARKS_PATH);
+  return stats.mtimeMs;
+}
+
+async function readBookmarkCache(): Promise<BookmarkCache | undefined> {
+  try {
+    return JSON.parse(
+      await readTextFile(BOOKMARK_CACHE_PATH, "utf8"),
+    ) as BookmarkCache;
+  } catch {
+    return undefined;
+  }
+}
+
+async function writeBookmarkCache(cache: BookmarkCache): Promise<void> {
+  await mkdir(CACHE_DIR, { recursive: true });
+
+  try {
+    await writeFile(BOOKMARK_CACHE_PATH, JSON.stringify(cache), "utf8");
+  } catch {
+    await rm(BOOKMARK_CACHE_PATH, { force: true });
+  }
 }
 
 function getDomain(url: string): string {

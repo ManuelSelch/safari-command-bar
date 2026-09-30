@@ -17,13 +17,19 @@ import { ProfilePicker } from "./set-profile";
 import {
   filterBookmarksByProfile,
   listProfileNames,
-  loadSafariBookmarks,
+  loadCachedSafariBookmarks,
+  loadSafariBookmarksCached,
 } from "./utils/safari-bookmarks";
 import {
   getCurrentProfile,
   setCurrentProfile as persistCurrentProfile,
 } from "./utils/profile-storage";
-import { SafariTab, focusSafariTab, loadSafariTabs } from "./utils/safari-tabs";
+import {
+  SafariTab,
+  focusSafariTab,
+  loadCachedSafariTabs,
+  loadSafariTabsAndCache,
+} from "./utils/safari-tabs";
 
 export default function Command() {
   const { push } = useNavigation();
@@ -34,18 +40,25 @@ export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [error, setError] = useState<string>();
 
-  async function reload(profileOverride?: string) {
+  async function loadCachedData(profileOverride?: string) {
     setIsLoading(true);
     setError(undefined);
 
     try {
-      const [bookmarks, storedProfile, tabs] = await Promise.all([
-        loadSafariBookmarks(),
+      const [cachedBookmarks, storedProfile, cachedTabs] = await Promise.all([
+        loadCachedSafariBookmarks(),
         getCurrentProfile(),
-        loadSafariTabs().catch(() => []),
+        loadCachedSafariTabs(),
       ]);
-      setBookmarks(bookmarks);
-      setTabs(tabs);
+
+      if (cachedBookmarks) {
+        setBookmarks(cachedBookmarks);
+      }
+
+      if (cachedTabs) {
+        setTabs(cachedTabs);
+      }
+
       setCurrentProfile(profileOverride || storedProfile);
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
@@ -54,8 +67,29 @@ export default function Command() {
     }
   }
 
+  async function refreshData(profileOverride?: string) {
+    try {
+      const [bookmarks, storedProfile, tabs] = await Promise.all([
+        loadSafariBookmarksCached(),
+        getCurrentProfile(),
+        loadSafariTabsAndCache().catch(() => []),
+      ]);
+
+      setBookmarks(bookmarks);
+      setTabs(tabs);
+      setCurrentProfile(profileOverride || storedProfile);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function reload(profileOverride?: string) {
+    await loadCachedData(profileOverride);
+    void refreshData(profileOverride);
+  }
+
   useEffect(() => {
-    reload();
+    void reload();
   }, []);
 
   const profileNames = useMemo(() => listProfileNames(bookmarks), [bookmarks]);
@@ -120,7 +154,7 @@ export default function Command() {
             <TabItem
               key={tab.id}
               tab={tab}
-              refresh={reload}
+              refresh={refreshData}
               resetSearch={() => setSearchText("")}
             />
           ))}

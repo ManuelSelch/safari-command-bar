@@ -9,7 +9,12 @@ import {
   showToast,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
-import { SafariTab, focusSafariTab, loadSafariTabs } from "./utils/safari-tabs";
+import {
+  SafariTab,
+  focusSafariTab,
+  loadCachedSafariTabs,
+  loadSafariTabsAndCache,
+} from "./utils/safari-tabs";
 
 export default function Command() {
   const [isLoading, setIsLoading] = useState(true);
@@ -17,12 +22,16 @@ export default function Command() {
   const [error, setError] = useState<string>();
   const [searchText, setSearchText] = useState("");
 
-  async function reload() {
+  async function loadCachedData() {
     setIsLoading(true);
     setError(undefined);
 
     try {
-      setTabs(await loadSafariTabs());
+      const cachedTabs = await loadCachedSafariTabs();
+
+      if (cachedTabs) {
+        setTabs(cachedTabs);
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -30,8 +39,21 @@ export default function Command() {
     }
   }
 
+  async function refreshData() {
+    try {
+      setTabs(await loadSafariTabsAndCache());
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function reload() {
+    await loadCachedData();
+    void refreshData();
+  }
+
   useEffect(() => {
-    reload();
+    void reload();
   }, []);
 
   return (
@@ -56,7 +78,7 @@ export default function Command() {
           <TabItem
             key={tab.id}
             tab={tab}
-            refresh={reload}
+            refresh={refreshData}
             resetSearch={() => setSearchText("")}
           />
         ))

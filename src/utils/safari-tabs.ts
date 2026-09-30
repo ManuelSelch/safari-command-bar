@@ -1,10 +1,19 @@
 import { execFile } from "node:child_process";
+import {
+  mkdir,
+  readFile as readTextFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { homedir } from "node:os";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
 const FIELD_DELIMITER = "\u001f";
 const ROW_DELIMITER = "\u001e";
+const CACHE_DIR = `${homedir()}/Library/Caches/safari-command-bar`;
+const TABS_CACHE_PATH = `${CACHE_DIR}/tabs-cache-v1.json`;
 
 export type SafariTab = {
   id: string;
@@ -16,12 +25,28 @@ export type SafariTab = {
   isCurrent: boolean;
 };
 
+type TabsCache = {
+  cachedAt: string;
+  tabs: SafariTab[];
+};
+
 export async function loadSafariTabs(): Promise<SafariTab[]> {
   const { stdout } = await execFileAsync("/usr/bin/osascript", [
     "-e",
     GET_TABS_SCRIPT,
   ]);
   return parseSafariTabsOutput(stdout.trim());
+}
+
+export async function loadCachedSafariTabs(): Promise<SafariTab[] | undefined> {
+  const cache = await readTabsCache();
+  return cache?.tabs;
+}
+
+export async function loadSafariTabsAndCache(): Promise<SafariTab[]> {
+  const tabs = await loadSafariTabs();
+  await writeTabsCache(tabs);
+  return tabs;
 }
 
 export async function focusSafariTab(
@@ -65,6 +90,28 @@ export function parseSafariTabsOutput(output: string): SafariTab[] {
         isCurrent: isCurrent === "true",
       };
     });
+}
+
+async function readTabsCache(): Promise<TabsCache | undefined> {
+  try {
+    return JSON.parse(await readTextFile(TABS_CACHE_PATH, "utf8")) as TabsCache;
+  } catch {
+    return undefined;
+  }
+}
+
+async function writeTabsCache(tabs: SafariTab[]): Promise<void> {
+  await mkdir(CACHE_DIR, { recursive: true });
+
+  try {
+    await writeFile(
+      TABS_CACHE_PATH,
+      JSON.stringify({ cachedAt: new Date().toISOString(), tabs }),
+      "utf8",
+    );
+  } catch {
+    await rm(TABS_CACHE_PATH, { force: true });
+  }
 }
 
 function getDomain(url: string): string {
