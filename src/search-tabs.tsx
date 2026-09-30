@@ -4,9 +4,9 @@ import {
   Icon,
   List,
   Toast,
+  Keyboard,
   closeMainWindow,
   showToast,
-  Keyboard,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SafariTab, focusSafariTab, loadSafariTabs } from "./utils/safari-tabs";
@@ -15,6 +15,7 @@ export default function Command() {
   const [isLoading, setIsLoading] = useState(true);
   const [tabs, setTabs] = useState<SafariTab[]>([]);
   const [error, setError] = useState<string>();
+  const [searchText, setSearchText] = useState("");
 
   async function reload() {
     setIsLoading(true);
@@ -37,6 +38,9 @@ export default function Command() {
     <List
       isLoading={isLoading}
       navigationTitle="Search Safari Tabs"
+      searchText={searchText}
+      onSearchTextChange={setSearchText}
+      filtering={{ keepSectionOrder: true }}
       searchBarPlaceholder="Search..."
     >
       {error ? (
@@ -48,16 +52,33 @@ export default function Command() {
       ) : tabs.length === 0 && !isLoading ? (
         <List.EmptyView icon={Icon.Window} title="No open Safari tabs" />
       ) : (
-        tabs.map((tab) => <TabItem key={tab.id} tab={tab} refresh={reload} />)
+        tabs.map((tab) => (
+          <TabItem
+            key={tab.id}
+            tab={tab}
+            refresh={reload}
+            resetSearch={() => setSearchText("")}
+          />
+        ))
       )}
     </List>
   );
 }
 
-function TabItem({ tab, refresh }: { tab: SafariTab; refresh: () => void }) {
+function TabItem({
+  tab,
+  refresh,
+  resetSearch,
+}: {
+  tab: SafariTab;
+  refresh: () => Promise<void>;
+  resetSearch: () => void;
+}) {
   async function focusTab() {
     try {
       await focusSafariTab(tab);
+      resetSearch();
+      await refresh();
       await closeMainWindow({ clearRootSearch: true });
     } catch (error) {
       await showToast({

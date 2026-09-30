@@ -5,11 +5,11 @@ import {
   Icon,
   List,
   Toast,
+  Keyboard,
   closeMainWindow,
   open,
   showToast,
   useNavigation,
-  Keyboard,
 } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import { SafariBookmark } from "./types";
@@ -31,6 +31,7 @@ export default function Command() {
   const [bookmarks, setBookmarks] = useState<SafariBookmark[]>([]);
   const [tabs, setTabs] = useState<SafariTab[]>([]);
   const [currentProfile, setCurrentProfile] = useState<string>();
+  const [searchText, setSearchText] = useState("");
   const [error, setError] = useState<string>();
 
   async function reload(profileOverride?: string) {
@@ -98,6 +99,9 @@ export default function Command() {
       navigationTitle={
         currentProfile ? `${currentProfile} Bookmarks` : "Profile Bookmarks"
       }
+      searchText={searchText}
+      onSearchTextChange={setSearchText}
+      filtering={{ keepSectionOrder: true }}
       searchBarPlaceholder="Search..."
       searchBarAccessory={
         !isLoading ? (
@@ -113,7 +117,12 @@ export default function Command() {
       {hasTabs ? (
         <List.Section title="Open Tabs" subtitle={`${tabs.length}`}>
           {tabs.map((tab) => (
-            <TabItem key={tab.id} tab={tab} refresh={reload} />
+            <TabItem
+              key={tab.id}
+              tab={tab}
+              refresh={reload}
+              resetSearch={() => setSearchText("")}
+            />
           ))}
         </List.Section>
       ) : null}
@@ -215,10 +224,20 @@ const SYSTEM_FOLDER_TITLES = new Set([
   "BookmarksMenu",
 ]);
 
-function TabItem({ tab, refresh }: { tab: SafariTab; refresh: () => void }) {
+function TabItem({
+  tab,
+  refresh,
+  resetSearch,
+}: {
+  tab: SafariTab;
+  refresh: () => Promise<void>;
+  resetSearch: () => void;
+}) {
   async function focusTab() {
     try {
       await focusSafariTab(tab);
+      resetSearch();
+      await refresh();
       await closeMainWindow({ clearRootSearch: true });
     } catch (error) {
       await showToast({
