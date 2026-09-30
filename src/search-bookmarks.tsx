@@ -60,8 +60,8 @@ export default function Command() {
   }, [bookmarks, currentProfile]);
 
   async function chooseProfile(profile: string) {
-    await persistCurrentProfile(profile);
     setCurrentProfile(profile);
+    await persistCurrentProfile(profile);
     await showToast({
       style: Toast.Style.Success,
       title: `Safari profile set to ${profile}`,
@@ -169,7 +169,7 @@ function ProfileDropdown({
   return (
     <List.Dropdown
       tooltip="Select Safari Profile"
-      value={currentProfile ?? NO_PROFILE_VALUE}
+      defaultValue={currentProfile ?? NO_PROFILE_VALUE}
       onChange={(value) => {
         if (value !== NO_PROFILE_VALUE && value !== currentProfile) {
           onChange(value);
