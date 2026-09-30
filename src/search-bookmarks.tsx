@@ -37,8 +37,6 @@ export default function Command() {
   const [bookmarks, setBookmarks] = useState<SafariBookmark[]>([]);
   const [tabs, setTabs] = useState<SafariTab[]>([]);
   const [currentProfile, setCurrentProfile] = useState<string>();
-  const [searchText, setSearchText] = useState("");
-  const [selectedItemId, setSelectedItemId] = useState<string>();
   const [error, setError] = useState<string>();
 
   async function loadCachedData(profileOverride?: string) {
@@ -127,16 +125,6 @@ export default function Command() {
 
   const hasTabs = tabs.length > 0;
   const hasBookmarks = Boolean(currentProfile && profileBookmarks.length > 0);
-  const topItemId = tabs[0]
-    ? getTabItemId(tabs[0])
-    : profileBookmarks[0]
-      ? getBookmarkItemId(profileBookmarks[0])
-      : undefined;
-
-  function resetListState() {
-    setSearchText("");
-    setSelectedItemId(topItemId);
-  }
 
   return (
     <List
@@ -144,11 +132,6 @@ export default function Command() {
       navigationTitle={
         currentProfile ? `${currentProfile} Bookmarks` : "Profile Bookmarks"
       }
-      searchText={searchText}
-      onSearchTextChange={setSearchText}
-      selectedItemId={selectedItemId ?? topItemId}
-      onSelectionChange={(id) => setSelectedItemId(id ?? undefined)}
-      filtering={{ keepSectionOrder: true }}
       searchBarPlaceholder="Search..."
       searchBarAccessory={
         !isLoading ? (
@@ -164,12 +147,7 @@ export default function Command() {
       {hasTabs ? (
         <List.Section title="Open Tabs" subtitle={`${tabs.length}`}>
           {tabs.map((tab) => (
-            <TabItem
-              key={tab.id}
-              tab={tab}
-              refresh={refreshData}
-              resetListState={resetListState}
-            />
+            <TabItem key={tab.id} tab={tab} refresh={refreshData} />
           ))}
         </List.Section>
       ) : null}
@@ -181,7 +159,6 @@ export default function Command() {
               key={bookmark.uuid}
               bookmark={bookmark}
               currentProfile={currentProfile}
-              resetListState={resetListState}
               onChangeProfile={() =>
                 push(
                   <ProfilePicker onSelected={(profile) => reload(profile)} />,
@@ -275,16 +252,13 @@ const SYSTEM_FOLDER_TITLES = new Set([
 function TabItem({
   tab,
   refresh,
-  resetListState,
 }: {
   tab: SafariTab;
   refresh: () => Promise<void>;
-  resetListState: () => void;
 }) {
   async function focusTab() {
     try {
       await focusSafariTab(tab);
-      resetListState();
       void refresh();
       await closeMainWindow({ clearRootSearch: true });
     } catch (error) {
@@ -298,7 +272,6 @@ function TabItem({
 
   return (
     <List.Item
-      id={getTabItemId(tab)}
       icon={getTabIcon(tab)}
       title={tab.title}
       subtitle={tab.domain || tab.url}
@@ -332,12 +305,10 @@ function TabItem({
 function BookmarkItem({
   bookmark,
   currentProfile,
-  resetListState,
   onChangeProfile,
 }: {
   bookmark: SafariBookmark;
   currentProfile?: string;
-  resetListState: () => void;
   onChangeProfile: () => void;
 }) {
   const folderPath = getRelativeFolderPath(bookmark.folderPath, currentProfile);
@@ -346,7 +317,6 @@ function BookmarkItem({
   async function openInSafari() {
     try {
       await open(bookmark.url, "Safari");
-      resetListState();
       await closeMainWindow({ clearRootSearch: true });
     } catch (error) {
       await showToast({
@@ -359,7 +329,6 @@ function BookmarkItem({
 
   return (
     <List.Item
-      id={getBookmarkItemId(bookmark)}
       icon={getBookmarkIcon(bookmark)}
       title={bookmark.title}
       subtitle={bookmark.domain}
@@ -386,14 +355,6 @@ function BookmarkItem({
       }
     />
   );
-}
-
-function getTabItemId(tab: SafariTab): string {
-  return `tab-${tab.id}`;
-}
-
-function getBookmarkItemId(bookmark: SafariBookmark): string {
-  return `bookmark-${bookmark.uuid}`;
 }
 
 function getTabIcon(tab: SafariTab) {

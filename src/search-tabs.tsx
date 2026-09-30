@@ -20,8 +20,6 @@ export default function Command() {
   const [isLoading, setIsLoading] = useState(true);
   const [tabs, setTabs] = useState<SafariTab[]>([]);
   const [error, setError] = useState<string>();
-  const [searchText, setSearchText] = useState("");
-  const [selectedItemId, setSelectedItemId] = useState<string>();
 
   async function loadCachedData() {
     setIsLoading(true);
@@ -57,22 +55,10 @@ export default function Command() {
     void reload();
   }, []);
 
-  const topItemId = tabs[0] ? getTabItemId(tabs[0]) : undefined;
-
-  function resetListState() {
-    setSearchText("");
-    setSelectedItemId(topItemId);
-  }
-
   return (
     <List
       isLoading={isLoading}
       navigationTitle="Search Safari Tabs"
-      searchText={searchText}
-      onSearchTextChange={setSearchText}
-      selectedItemId={selectedItemId ?? topItemId}
-      onSelectionChange={(id) => setSelectedItemId(id ?? undefined)}
-      filtering={{ keepSectionOrder: true }}
       searchBarPlaceholder="Search..."
     >
       {error ? (
@@ -85,12 +71,7 @@ export default function Command() {
         <List.EmptyView icon={Icon.Window} title="No open Safari tabs" />
       ) : (
         tabs.map((tab) => (
-          <TabItem
-            key={tab.id}
-            tab={tab}
-            refresh={refreshData}
-            resetListState={resetListState}
-          />
+          <TabItem key={tab.id} tab={tab} refresh={refreshData} />
         ))
       )}
     </List>
@@ -100,16 +81,13 @@ export default function Command() {
 function TabItem({
   tab,
   refresh,
-  resetListState,
 }: {
   tab: SafariTab;
   refresh: () => Promise<void>;
-  resetListState: () => void;
 }) {
   async function focusTab() {
     try {
       await focusSafariTab(tab);
-      resetListState();
       void refresh();
       await closeMainWindow({ clearRootSearch: true });
     } catch (error) {
@@ -123,7 +101,6 @@ function TabItem({
 
   return (
     <List.Item
-      id={getTabItemId(tab)}
       icon={getTabIcon(tab)}
       title={tab.title}
       subtitle={tab.domain || tab.url}
@@ -152,10 +129,6 @@ function TabItem({
       }
     />
   );
-}
-
-function getTabItemId(tab: SafariTab): string {
-  return `tab-${tab.id}`;
 }
 
 function getTabIcon(tab: SafariTab) {
