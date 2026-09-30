@@ -5,9 +5,11 @@ import {
   Icon,
   List,
   Toast,
+  closeMainWindow,
   open,
   showToast,
   useNavigation,
+  Keyboard,
 } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import { SafariBookmark } from "./types";
@@ -21,11 +23,13 @@ import {
   getCurrentProfile,
   setCurrentProfile as persistCurrentProfile,
 } from "./utils/profile-storage";
+import { SafariTab, focusSafariTab, loadSafariTabs } from "./utils/safari-tabs";
 
 export default function Command() {
   const { push } = useNavigation();
   const [isLoading, setIsLoading] = useState(true);
   const [bookmarks, setBookmarks] = useState<SafariBookmark[]>([]);
+  const [tabs, setTabs] = useState<SafariTab[]>([]);
   const [currentProfile, setCurrentProfile] = useState<string>();
   const [error, setError] = useState<string>();
 
@@ -34,11 +38,13 @@ export default function Command() {
     setError(undefined);
 
     try {
-      const [bookmarks, storedProfile] = await Promise.all([
+      const [bookmarks, storedProfile, tabs] = await Promise.all([
         loadSafariBookmarks(),
         getCurrentProfile(),
+        loadSafariTabs().catch(() => []),
       ]);
       setBookmarks(bookmarks);
+      setTabs(tabs);
       setCurrentProfile(profileOverride || storedProfile);
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
@@ -83,6 +89,9 @@ export default function Command() {
     );
   }
 
+  const hasTabs = tabs.length > 0;
+  const hasBookmarks = Boolean(currentProfile && profileBookmarks.length > 0);
+
   return (
     <List
       isLoading={isLoading}
@@ -101,7 +110,32 @@ export default function Command() {
         ) : undefined
       }
     >
-      {!currentProfile && !isLoading ? (
+      {hasTabs ? (
+        <List.Section title="Open Tabs" subtitle={`${tabs.length}`}>
+          {tabs.map((tab) => (
+            <TabItem key={tab.id} tab={tab} refresh={reload} />
+          ))}
+        </List.Section>
+      ) : null}
+
+      {hasBookmarks ? (
+        <List.Section title="Bookmarks" subtitle={`${profileBookmarks.length}`}>
+          {profileBookmarks.map((bookmark) => (
+            <BookmarkItem
+              key={bookmark.uuid}
+              bookmark={bookmark}
+              currentProfile={currentProfile}
+              onChangeProfile={() =>
+                push(
+                  <ProfilePicker onSelected={(profile) => reload(profile)} />,
+                )
+              }
+            />
+          ))}
+        </List.Section>
+      ) : null}
+
+      {!isLoading && !hasTabs && !currentProfile ? (
         <List.EmptyView
           icon={Icon.PersonCircle}
           title="No current profile selected"
@@ -116,7 +150,9 @@ export default function Command() {
             />
           }
         />
-      ) : profileBookmarks.length === 0 && !isLoading ? (
+      ) : null}
+
+      {!isLoading && !hasTabs && currentProfile && !hasBookmarks ? (
         <List.EmptyView
           icon={Icon.Bookmark}
           title={`No bookmarks found for ${currentProfile}`}
@@ -131,18 +167,7 @@ export default function Command() {
             />
           }
         />
-      ) : (
-        profileBookmarks.map((bookmark) => (
-          <BookmarkItem
-            key={bookmark.uuid}
-            bookmark={bookmark}
-            currentProfile={currentProfile}
-            onChangeProfile={() =>
-              push(<ProfilePicker onSelected={(profile) => reload(profile)} />)
-            }
-          />
-        ))
-      )}
+      ) : null}
     </List>
   );
 }
@@ -189,6 +214,56 @@ const SYSTEM_FOLDER_TITLES = new Set([
   "BookmarksBar",
   "BookmarksMenu",
 ]);
+
+function TabItem({ tab, refresh }: { tab: SafariTab; refresh: () => void }) {
+  async function focusTab() {
+    try {
+      await focusSafariTab(tab);
+      await closeMainWindow({ clearRootSearch: true });
+    } catch (error) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Could not focus tab",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return (
+    <List.Item
+      icon={getTabIcon(tab)}
+      title={tab.title}
+      subtitle={tab.domain || tab.url}
+      keywords={[
+        tab.url,
+        tab.domain,
+        `window ${tab.windowId}`,
+        `tab ${tab.tabIndex}`,
+      ]}
+      accessories={[
+        tab.isCurrent
+          ? { tag: "Current" }
+          : { text: `Window ${tab.windowId} · Tab ${tab.tabIndex}` },
+      ]}
+      actions={
+        <ActionPanel>
+          <Action title="Focus Tab" icon={Icon.Window} onAction={focusTab} />
+          <Action.CopyToClipboard title="Copy URL" content={tab.url} />
+          <Action.CopyToClipboard
+            title="Copy Markdown Link"
+            content={`[${tab.title}](${tab.url})`}
+          />
+          <Action
+            title="Reload Tabs"
+            icon={Icon.ArrowClockwise}
+            shortcut={Keyboard.Shortcut.Common.Refresh}
+            onAction={refresh}
+          />
+        </ActionPanel>
+      }
+    />
+  );
+}
 
 function BookmarkItem({
   bookmark,
@@ -244,14 +319,22 @@ function BookmarkItem({
   );
 }
 
+function getTabIcon(tab: SafariTab) {
+  return getWebsiteIcon(tab.domain, Icon.Globe);
+}
+
 function getBookmarkIcon(bookmark: SafariBookmark) {
-  if (!bookmark.domain) {
-    return Icon.Bookmark;
+  return getWebsiteIcon(bookmark.domain, Icon.Bookmark);
+}
+
+function getWebsiteIcon(domain: string, fallback: Icon) {
+  if (!domain) {
+    return fallback;
   }
 
   return {
-    source: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(bookmark.domain)}&sz=64`,
-    fallback: Icon.Bookmark,
+    source: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
+    fallback,
   };
 }
 
