@@ -14,9 +14,13 @@ import { SafariBookmark } from "./types";
 import { ProfilePicker } from "./set-profile";
 import {
   filterBookmarksByProfile,
+  listProfileNames,
   loadSafariBookmarks,
 } from "./utils/safari-bookmarks";
-import { getCurrentProfile } from "./utils/profile-storage";
+import {
+  getCurrentProfile,
+  setCurrentProfile as persistCurrentProfile,
+} from "./utils/profile-storage";
 
 export default function Command() {
   const { push } = useNavigation();
@@ -47,11 +51,22 @@ export default function Command() {
     reload();
   }, []);
 
+  const profileNames = useMemo(() => listProfileNames(bookmarks), [bookmarks]);
+
   const profileBookmarks = useMemo(() => {
     return currentProfile
       ? filterBookmarksByProfile(bookmarks, currentProfile)
       : [];
   }, [bookmarks, currentProfile]);
+
+  async function chooseProfile(profile: string) {
+    await persistCurrentProfile(profile);
+    setCurrentProfile(profile);
+    await showToast({
+      style: Toast.Style.Success,
+      title: `Safari profile set to ${profile}`,
+    });
+  }
 
   if (error) {
     return (
@@ -78,6 +93,13 @@ export default function Command() {
         currentProfile
           ? `Search ${currentProfile} bookmarks...`
           : "Select a profile first..."
+      }
+      searchBarAccessory={
+        <ProfileDropdown
+          currentProfile={currentProfile}
+          profiles={profileNames}
+          onChange={chooseProfile}
+        />
       }
     >
       {!currentProfile && !isLoading ? (
@@ -122,6 +144,39 @@ export default function Command() {
         ))
       )}
     </List>
+  );
+}
+
+const NO_PROFILE_VALUE = "__no-profile-selected__";
+
+function ProfileDropdown({
+  currentProfile,
+  profiles,
+  onChange,
+}: {
+  currentProfile?: string;
+  profiles: string[];
+  onChange: (profile: string) => void;
+}) {
+  return (
+    <List.Dropdown
+      tooltip="Select Safari Profile"
+      value={currentProfile ?? NO_PROFILE_VALUE}
+      onChange={(value) => {
+        if (value !== NO_PROFILE_VALUE) {
+          onChange(value);
+        }
+      }}
+    >
+      {!currentProfile ? (
+        <List.Dropdown.Item title="Select Profile" value={NO_PROFILE_VALUE} />
+      ) : null}
+      <List.Dropdown.Section title="Profiles">
+        {profiles.map((profile) => (
+          <List.Dropdown.Item key={profile} title={profile} value={profile} />
+        ))}
+      </List.Dropdown.Section>
+    </List.Dropdown>
   );
 }
 
