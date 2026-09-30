@@ -282,10 +282,12 @@ function TabItem({
       keywords={[
         tab.url,
         tab.domain,
-        `window ${tab.windowId}`,
+        `window ${tab.displayWindowIndex}`,
         `tab ${tab.tabIndex}`,
       ]}
-      accessories={[{ text: `Window ${tab.windowId} · Tab ${tab.tabIndex}` }]}
+      accessories={[
+        { text: `Window ${tab.displayWindowIndex} · Tab ${tab.tabIndex}` },
+      ]}
       actions={
         <ActionPanel>
           <Action title="Focus Tab" icon={Icon.Window} onAction={focusTab} />

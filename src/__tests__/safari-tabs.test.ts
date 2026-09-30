@@ -14,6 +14,9 @@ describe("Safari tab parsing", () => {
         "https://developers.raycast.com",
         "true",
       ].join(fieldDelimiter),
+      ["120", "1", "Other", "https://other.example.com", "false"].join(
+        fieldDelimiter,
+      ),
       ["924", "2", "Example", "https://example.com/path", "false"].join(
         fieldDelimiter,
       ),
@@ -23,6 +26,7 @@ describe("Safari tab parsing", () => {
       {
         id: "924-1",
         windowId: 924,
+        displayWindowIndex: 2,
         tabIndex: 1,
         title: "Raycast API",
         url: "https://developers.raycast.com",
@@ -30,8 +34,19 @@ describe("Safari tab parsing", () => {
         isCurrent: true,
       },
       {
+        id: "120-1",
+        windowId: 120,
+        displayWindowIndex: 1,
+        tabIndex: 1,
+        title: "Other",
+        url: "https://other.example.com",
+        domain: "other.example.com",
+        isCurrent: false,
+      },
+      {
         id: "924-2",
         windowId: 924,
+        displayWindowIndex: 2,
         tabIndex: 2,
         title: "Example",
         url: "https://example.com/path",

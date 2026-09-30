@@ -18,6 +18,7 @@ const TABS_CACHE_PATH = `${CACHE_DIR}/tabs-cache-v1.json`;
 export type SafariTab = {
   id: string;
   windowId: number;
+  displayWindowIndex: number;
   tabIndex: number;
   title: string;
   url: string;
@@ -71,25 +72,33 @@ export function parseSafariTabsOutput(output: string): SafariTab[] {
     return [];
   }
 
-  return output
+  const rows = output
     .split(ROW_DELIMITER)
     .map((row) => row.split(FIELD_DELIMITER))
-    .filter((fields) => fields.length >= 5)
-    .map(([windowId, tabIndex, title, url, isCurrent]) => {
-      const parsedWindowId = Number(windowId);
-      const parsedTabIndex = Number(tabIndex);
-      const parsedUrl = url || "";
+    .filter((fields) => fields.length >= 5);
 
-      return {
-        id: `${parsedWindowId}-${parsedTabIndex}`,
-        windowId: parsedWindowId,
-        tabIndex: parsedTabIndex,
-        title: title || parsedUrl || "Untitled",
-        url: parsedUrl,
-        domain: getDomain(parsedUrl),
-        isCurrent: isCurrent === "true",
-      };
-    });
+  const windowDisplayIndexes = new Map(
+    [...new Set(rows.map(([windowId]) => Number(windowId)))]
+      .sort((a, b) => a - b)
+      .map((windowId, index) => [windowId, index + 1]),
+  );
+
+  return rows.map(([windowId, tabIndex, title, url, isCurrent]) => {
+    const parsedWindowId = Number(windowId);
+    const parsedTabIndex = Number(tabIndex);
+    const parsedUrl = url || "";
+
+    return {
+      id: `${parsedWindowId}-${parsedTabIndex}`,
+      windowId: parsedWindowId,
+      displayWindowIndex: windowDisplayIndexes.get(parsedWindowId) ?? 1,
+      tabIndex: parsedTabIndex,
+      title: title || parsedUrl || "Untitled",
+      url: parsedUrl,
+      domain: getDomain(parsedUrl),
+      isCurrent: isCurrent === "true",
+    };
+  });
 }
 
 async function readTabsCache(): Promise<TabsCache | undefined> {
