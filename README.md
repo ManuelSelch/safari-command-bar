@@ -3,7 +3,9 @@
 A tiny Raycast extension for profile-aware Safari bookmark search.
 
 ## Idea
-Safari profiles are mirrored by bookmark folders with the same name. The extension stores a manual `current profile`, then searches bookmarks below the matching folder only.
+- Safari profiles are mirrored by bookmark folders with the same name. 
+- The extension stores a manual `current profile`, then searches bookmarks below the matching folder only.
+- It also shows the current opened tabs
 
 ## Commands
 - **Set Safari Profile**: choose a bookmark folder as current profile.
@@ -23,6 +25,3 @@ Raycast needs Full Disk Access to read:
 ```text
 ~/Library/Safari/Bookmarks.plist
 ```
-
-## Notes
-This is intentionally separate from the installed Raycast Safari extension because Store extensions are managed by Raycast and local edits can be overwritten.
